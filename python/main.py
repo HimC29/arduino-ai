@@ -50,7 +50,7 @@ if(api_key):
     client = genai.Client(api_key=api_key)
 else:
     print("ERROR: Could not get API_KEY from .env")
-instructions = "Arduino Assistant. Format: [Confirmation sentence].\n[pin][h/l] Constraint: Always end with the code. No extra text after code. Example: Pin 2 HIGH.\n2h"
+instructions = "Arduino Assistant. Format: [Confirmation sentence].\n[pin][h/l] [pin][h/l]... Constraint: Put all codes on the LAST line separated by spaces. No other text after codes. Example: Turning on pins 2 and 4.\n2h 4h"
 
 def get_ai_response(contents):
     try:
@@ -87,13 +87,18 @@ def main():
 
         ai_response = get_ai_response(contents)
         clean_response = ai_response.strip()
+
         lines = clean_response.split("\n")
-        last_line = lines[-1]
+        
+        cmdsArray = lines[-1].split(" ")
+
         message = "\n".join(lines[:-1])
 
-        print("Gemini: ")
-        print(message)
-        af.send_data(last_line)
+        print(f"Gemini: {message}")
+
+        for cmd in cmdsArray:
+            af.send_data(f"{cmd}\n")
+            time.sleep(0.05)
             
 if(__name__ == "__main__"):
     main()
