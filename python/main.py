@@ -50,7 +50,12 @@ if(api_key):
     client = genai.Client(api_key=api_key)
 else:
     print("ERROR: Could not get API_KEY from .env")
-instructions = "Arduino Assistant. Format: [Confirmation sentence].\n[pin][h/l] [pin][h/l]... Constraint: Put all codes on the LAST line separated by spaces. No other text after codes. Example: Turning on pins 2 and 4.\n2h 4h"
+instructions = ("Arduino Controller. " 
+                "Protocol: 'o'[pin][h/l] for output, 'i'[pin] for input. "
+                "Format: [1 sentence confirmation]\n[code] [code]... "
+                "Constraints: Codes must be on the last line. Space-separated. No trailing text. "
+                "Example: Toggling pin 2 and reading pin 3. o2h i3"
+)
 
 def get_ai_response(contents):
     try:
@@ -84,20 +89,45 @@ def main():
         contents = input("\nAsk Gemini: ")
 
         if(contents.lower() == "exit"): exit()
+        if(contents == "developer"): 
+            print("\nDeveloper mode - control with raw serial cmds")
+            print('Type "exit" to exit developer mode.')
+            while True:
+                raw_input = input("\nSerial: ")
+                
+                if(raw_input.lower() == "exit"): break
+
+                cmds_array = raw_input.split(" ")
+
+                for cmd in cmds_array:
+                    if not cmd: continue
+
+                    type = cmd[0].lower()
+                    if(type == "o"):
+                        af.send_data(cmd.lower() + "\n")
+                    elif(type == "i"):
+                        print(af.send_and_read(cmd.lower() + "\n"))
+                    
+                    time.sleep(0.05)
+            continue
 
         ai_response = get_ai_response(contents)
         clean_response = ai_response.strip()
 
         lines = clean_response.split("\n")
         
-        cmdsArray = lines[-1].split(" ")
+        cmds_array = lines[-1].split(" ")
 
         message = "\n".join(lines[:-1])
 
         print(f"Gemini: {message}")
 
-        for cmd in cmdsArray:
-            af.send_data(f"{cmd}\n")
+        for cmd in cmds_array:
+            type = list(cmd)[0]
+            if(type == "o"):
+                af.send_data(cmd.lower() + "\n")
+            elif(type == "i"):
+                print(af.send_and_read(cmd.lower() + "\n"))
             time.sleep(0.05)
             
 if(__name__ == "__main__"):
